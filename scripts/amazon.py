@@ -2,7 +2,6 @@ import time
 import os
 import json
 import asyncio
-import aiohttp
 from playwright.async_api import async_playwright, Page
 from playwright_stealth import stealth_async
 
@@ -30,7 +29,6 @@ async def go_to_next_page(page: Page):
                 return False
 
             await next_button.click()
-            print("Waiting for page to load complete")
             time.sleep(3)
             return True
         else:
@@ -48,6 +46,7 @@ async def scrape_page(page: Page, offset: int):
     )
 
     if product_container:
+
         products = await product_container.query_selector_all(
             'div[data-component-type="s-search-result"]'
         )
@@ -152,7 +151,7 @@ def convert_to_plus_format(text: str):
 async def main():
     # init and launch the browser
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=True)
+        browser = await pw.chromium.launch(headless=False)
         page = await browser.new_page(
             viewport={"width": 1920, "height": 1080},
         )
@@ -170,9 +169,9 @@ async def main():
             print(f"Scrapping page {page_number}")
             data = await scrape_page(page, offset)
             offset += data["count"]
-            print(f"✅ Writing page {page_number}")
-            page_number += 1
             save_file(data, f"{query}/{page_number}")
+            print(f"✅ Page {page_number} has been written.")
+            page_number += 1
 
             if not await go_to_next_page(page):
                 break
