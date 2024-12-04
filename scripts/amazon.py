@@ -4,10 +4,9 @@ import json
 import asyncio
 import aiohttp
 from playwright.async_api import async_playwright, Page
-from playwright_stealth import stealth_sync
+from playwright_stealth import stealth_async
 
 
-# scrapping url
 base_url = "https://www.amazon.com"
 
 
@@ -17,39 +16,39 @@ def absolute_url(page: Page, relative_url: str):
     return page.url + relative_url
 
 
-def go_to_next_page(page: Page):
-    pagination_container = page.query_selector("span.s-pagination-strip ul")
+async def go_to_next_page(page: Page):
+    pagination_container = await page.query_selector("span.s-pagination-strip ul")
 
     if pagination_container:
-        next_button = pagination_container.query_selector('text="Next"')
+        next_button = await pagination_container.query_selector('text="Next"')
 
         if next_button:
-            is_disable = next_button.get_attribute("aria-disabled") == "true"
+            is_disable = await next_button.get_attribute("aria-disabled") == "true"
 
             if is_disable:
-                print("Next button is disable, terminating the process!")
+                print("ℹ️ Next button is disable, terminating the process")
                 return False
 
-            next_button.click()
+            await next_button.click()
             print("Waiting for page to load complete")
             time.sleep(3)
             return True
         else:
-            print("Can not find next button")
+            print("❌ Can not find next button")
     else:
-        print("Can not find pagination")
+        print("❌ Can not find pagination")
     return False
 
 
-def scrape_page(page: Page, offset: int):
+async def scrape_page(page: Page, offset: int):
     details = []
     count = 0
-    product_container = page.query_selector(
+    product_container = await page.query_selector(
         'span[data-component-type="s-search-results"]'
     )
 
     if product_container:
-        products = product_container.query_selector_all(
+        products = await product_container.query_selector_all(
             'div[data-component-type="s-search-result"]'
         )
         count = len(products)
@@ -67,46 +66,56 @@ def scrape_page(page: Page, offset: int):
                 "alt": None,
                 "price": [],
             }
-            info["uuid"] = product.get_attribute("data-uuid")
-            title_container = product.query_selector("div[data-cy='title-recipe']")
-            review_container = product.query_selector("div[data-cy='reviews-block']")
-            price_container = product.query_selector("div[data-cy='price-recipe']")
-            image_container = product.query_selector(
+            info["uuid"] = await product.get_attribute("data-uuid")
+            title_container = await product.query_selector(
+                "div[data-cy='title-recipe']"
+            )
+            review_container = await product.query_selector(
+                "div[data-cy='reviews-block']"
+            )
+            price_container = await product.query_selector(
+                "div[data-cy='price-recipe']"
+            )
+            image_container = await product.query_selector(
                 "span[data-component-type='s-product-image']"
             )
 
             # url
             if title_container:
-                title_url = title_container.query_selector("a")
-                info["title"] = title_container.text_content()
+                title_url = await title_container.query_selector("a")
+                info["title"] = await title_container.text_content()
 
                 if title_url:
-                    info["url"] = absolute_url(page, title_url.get_attribute("href"))
+                    info["url"] = absolute_url(
+                        page, await title_url.get_attribute("href")
+                    )
 
             # rating
             if review_container:
-                first_span = review_container.query_selector("div:first-child > span")
-                second_span = review_container.query_selector(
+                first_span = await review_container.query_selector(
+                    "div:first-child > span"
+                )
+                second_span = await review_container.query_selector(
                     "div:first-child > span:nth-of-type(2)"
                 )
 
                 if first_span:
-                    info["rate"] = first_span.get_attribute("aria-label")
+                    info["rate"] = await first_span.get_attribute("aria-label")
 
                 if second_span:
-                    info["rate_count"] = second_span.inner_text()
+                    info["rate_count"] = await second_span.inner_text()
             # image
             if image_container:
-                img = image_container.query_selector("img")
+                img = await image_container.query_selector("img")
 
                 if img:
-                    info["alt"] = img.get_attribute("alt")
-                    info["thumbnail"] = img.get_attribute("src")
+                    info["alt"] = await img.get_attribute("alt")
+                    info["thumbnail"] = await img.get_attribute("src")
 
             # price
             if price_container:
-                prices = price_container.query_selector_all("span.a-offscreen")
-                info["price"] = list(map(lambda price: price.text_content(), prices))
+                prices = await price_container.query_selector_all("span.a-offscreen")
+                info["price"] = [await price.text_content() for price in prices]
 
             details.append(info)
     else:
@@ -116,12 +125,15 @@ def scrape_page(page: Page, offset: int):
 
 def save_file(data, path: str):
     # ensure the directory exists
-    directory = os.path.dirname("data/amazon")
+    directory = os.path.dirname(f"data/amazon/{path}")
     if not os.path.exists(directory):
         os.makedirs(directory)
 
+    # pick last segment as file name
+    segment = path.split("/")
+
     # write the data to a JSON file
-    with open(f"{directory}/{path}.json", "w", encoding="utf-8") as json_file:
+    with open(f"{directory}/{segment[-1]}.json", "w", encoding="utf-8") as json_file:
         json.dump(data, json_file, ensure_ascii=False, indent=4)
 
 
@@ -140,7 +152,6 @@ def convert_to_plus_format(text: str):
 async def main():
     # init and launch the browser
     async with async_playwright() as pw:
-        data = {}
         browser = await pw.chromium.launch(headless=True)
         page = await browser.new_page(
             viewport={"width": 1920, "height": 1080},
@@ -151,20 +162,20 @@ async def main():
         formattedQuery = convert_to_plus_format(query)
 
         # apply stealth techniques
-        stealth_sync(page)
+        await stealth_async(page)
         await page.goto(base_url + f"/s?k={formattedQuery}")
 
         while True:
             print("=============================")
             print(f"Scrapping page {page_number}")
-            data[page_number] = scrape_page(page, offset)
-            offset += data[page_number]["count"]
+            data = await scrape_page(page, offset)
+            offset += data["count"]
+            print(f"✅ Writing page {page_number}")
             page_number += 1
+            save_file(data, f"{query}/{page_number}")
 
-            if not go_to_next_page(page):
+            if not await go_to_next_page(page):
                 break
-
-        save_file(data, query)
 
         await browser.close()
 
