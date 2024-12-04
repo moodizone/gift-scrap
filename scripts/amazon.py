@@ -1,9 +1,9 @@
 import time
-import os
-import json
+
 import asyncio
 from playwright.async_api import async_playwright, Page
 from playwright_stealth import stealth_async
+from utils.index import save_file
 
 
 base_url = "https://www.amazon.com"
@@ -120,20 +120,6 @@ async def scrape_page(page: Page, offset: int):
     else:
         print("Can not find the product container")
     return {"count": count, "details": details}
-
-
-def save_file(data, path: str):
-    # ensure the directory exists
-    directory = os.path.dirname(f"data/amazon/{path}")
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-    # pick last segment as file name
-    segment = path.split("/")
-
-    # write the data to a JSON file
-    with open(f"{directory}/{segment[-1]}.json", "w", encoding="utf-8") as json_file:
-        json.dump(data, json_file, ensure_ascii=False, indent=4)
 
 
 def convert_to_plus_format(text: str):
