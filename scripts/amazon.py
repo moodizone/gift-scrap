@@ -140,14 +140,6 @@ def convert_to_plus_format(text: str):
     return text.strip().replace(" ", "+")
 
 
-# async def download_image(url, save_path):
-#     async with aiohttp.ClientSession() as session:
-#         async with session.get(url) as response:
-#             with open(save_path, "wb") as f:
-#                 f.write(await response.read())
-#     print(f"Image saved to {save_path}")
-
-
 async def main():
     # init and launch the browser
     async with async_playwright() as pw:
