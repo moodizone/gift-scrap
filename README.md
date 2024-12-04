@@ -5,6 +5,7 @@ This project is designed for collecting and storing data from websites as JSON f
 ---
 
 ## **Features**
+
 - Scrape product details such as title, description, price, images, and source.
 - Handle dynamic web pages with Playwright.
 - Download and store images locally.
@@ -14,8 +15,17 @@ This project is designed for collecting and storing data from websites as JSON f
 ---
 
 ## **Technologies Used**
+
 - **Python 3.9+**
 - **Requests**: For making HTTP requests.
 - **BeautifulSoup4**: For parsing HTML and extracting data.
 - **Playwright**: For handling dynamic pages and JavaScript interactions.
 - **JSON**: For structured data storage.
+
+---
+
+## **Scripts**
+
+```
+python -m scripts.amazon
+```
