@@ -38,7 +38,7 @@ def generate_dates(start_date: str, end_date: str):
 
     # check if dates are valid
     if start > end:
-        raise ValueError("Start date must be before end date")
+        raise ValueError("start date must be before end date")
 
     # loop through each day
     current = start
