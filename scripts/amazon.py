@@ -4,15 +4,10 @@ import asyncio
 from playwright.async_api import async_playwright, Page
 from playwright_stealth import stealth_async
 from utils.index import save_file
+from utils.index import absolute_url
 
 
 base_url = "https://www.amazon.com"
-
-
-def absolute_url(page: Page, relative_url: str):
-    if relative_url == None:
-        return None
-    return page.url + relative_url
 
 
 async def go_to_next_page(page: Page):
@@ -147,7 +142,7 @@ async def main():
             print(f"Scrapping page {page_number}")
             data = await scrape_page(page, offset)
             offset += data["count"]
-            save_file(data, f"{query}/{page_number}")
+            save_file(data, f"amazon/{query}/{page_number}")
             print(f"✅ Page {page_number} has been written.")
             page_number += 1
 

@@ -1,10 +1,11 @@
 import os
 import json
+from playwright.async_api import Page
 
 
 def save_file(data, path: str):
     # ensure the directory exists
-    directory = os.path.dirname(f"data/amazon/{path}")
+    directory = os.path.dirname(f"data/{path}")
     if not os.path.exists(directory):
         os.makedirs(directory)
 
@@ -14,3 +15,16 @@ def save_file(data, path: str):
     # write the data to a JSON file
     with open(f"{directory}/{segment[-1]}.json", "w", encoding="utf-8") as json_file:
         json.dump(data, json_file, ensure_ascii=False, indent=4)
+
+
+def absolute_url(page: Page, relative_url: str):
+    if relative_url == None:
+        return None
+    return page.url + relative_url
+
+
+def convert_persian_to_english(persian_number: str):
+    # translation table: Persian digits to English digits
+    translation_table = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
+    # replace commas, percent and translate digits
+    return persian_number.translate(translation_table).replace(",", "").replace("٪", "")
