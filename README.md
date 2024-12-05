@@ -27,5 +27,5 @@ This project is designed for collecting and storing data from websites as JSON f
 ## **Scripts**
 
 ```
-python -m scripts.amazon
+python -m scripts.{script name}
 ```

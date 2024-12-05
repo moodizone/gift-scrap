@@ -1,5 +1,4 @@
 import time
-
 import asyncio
 from playwright.async_api import async_playwright, Page
 from playwright_stealth import stealth_async
@@ -113,7 +112,7 @@ async def scrape_page(page: Page, offset: int):
 
             details.append(info)
     else:
-        print("Can not find the product container")
+        print("❌ Can not find the product container")
     return {"count": count, "details": details}
 
 
@@ -124,7 +123,7 @@ def convert_to_plus_format(text: str):
 async def main():
     # init and launch the browser
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=False)
+        browser = await pw.chromium.launch(headless=True)
         page = await browser.new_page(
             viewport={"width": 1920, "height": 1080},
         )
