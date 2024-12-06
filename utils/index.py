@@ -1,6 +1,7 @@
 import os
 import json
 from playwright.async_api import Page
+from datetime import datetime, timedelta
 
 
 def save_file(data, path: str):
@@ -28,3 +29,19 @@ def convert_persian_to_english(persian_number: str):
     translation_table = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
     # replace commas, percent and translate digits
     return persian_number.translate(translation_table).replace(",", "").replace("٪", "")
+
+
+def generate_dates(start_date: str, end_date: str):
+    # convert strings to datetime objects
+    start = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
+
+    # check if dates are valid
+    if start > end:
+        raise ValueError("start date must be before end date")
+
+    # loop through each day
+    current = start
+    while current <= end:
+        yield current.strftime("%Y-%m-%d")
+        current += timedelta(days=1)

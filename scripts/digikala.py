@@ -108,14 +108,14 @@ async def scrape_page(page: Page, offset: int):
 
             details.append(info)
     else:
-        print("Can not find the product container")
+        print("❌ Can not find the product container")
     return {"count": count, "details": details}
 
 
 async def main():
     # init and launch the browser
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=False)
+        browser = await pw.chromium.launch(headless=True)
         page = await browser.new_page(
             viewport={"width": 1920, "height": 1080},
             user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
