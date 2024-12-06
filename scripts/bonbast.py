@@ -8,10 +8,6 @@ url = "https://bonbast.com/archive"
 
 async def go_to_date(page: Page, date: str):
     input = await page.query_selector("form.form-inline input[type='text']")
-    day = date.split("-")[-1]
-
-    # removing leading 0
-    p_day = f"{int(day)}"
 
     if input:
         await input.focus()
@@ -24,15 +20,6 @@ async def go_to_date(page: Page, date: str):
         await input.press("Enter", delay=100)
         return
 
-        # wait for calendar to pop-up
-        # await page.wait_for_selector("#ui-datepicker-div", timeout=5000)
-        # tbody = await page.query_selector("table.ui-datepicker-calendar tbody")
-        # if tbody:
-        #     day = await tbody.query_selector(f"td:has-text('{p_day}')")
-        #     if day:
-        #         print(await day.inner_html())
-        #         await day.click()
-        #         return
     raise ValueError("❌ Can not find form controllers")
 
 
@@ -106,26 +93,20 @@ async def main():
 
         year = start_date.split("-")[0]
         for date in generate_dates(start_date, end_date):
-            attempt = 0
-            while attempt < 3:
-                await go_to_date(page, date)
-                try:
-                    await page.wait_for_selector(
-                        f"em.miladi:has-text('{date} .')", timeout=3000
-                    )
-                except:
-                    attempt += 1
-                    if attempt >= 3:
-                        print(f"Skipped {date} because of error(s)")
-                        continue
-                    # wait before retrying (optional)
-                    # suspends the execution of the current coroutine
-                    # this allows other tasks to run in the meantime without blocking the event loop.
-                    # preventing the script from sending requests too quickly in succession
-                    await asyncio.sleep(2)
-                else:
-                    data[date] = await scrap_page(page)
-                    break
+            await go_to_date(page, date)
+
+            try:
+                await page.wait_for_selector(
+                    f"em.miladi:has-text('{date} .')", timeout=3000
+                )
+            except:
+                print(f"Skipped {date} because of error(s)")
+            else:
+                data[date] = await scrap_page(page)
+            finally:
+                # preventing the script from sending requests too quickly in succession
+                # this allows other tasks to run in the meantime without blocking the event loop.
+                await asyncio.sleep(5)
         save_file(data, f"bonbast/{year}")
         await browser.close()
 
