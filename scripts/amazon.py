@@ -40,6 +40,22 @@ async def go_to_next_page(page: Page):
     return False
 
 
+def extract_rate_count(raw: str) -> int | None:
+    match = re.search(r"([\d,]+)", raw)
+
+    if match:
+        number = match.group(1).replace(",", "")
+        return int(number)
+    return None
+
+
+def extract_ratings(raw: str) -> int | None:
+    match = re.search(r"(\d+(\.\d+)?)", raw)
+    if match:
+        return float(match.group(1))
+    return None
+
+
 async def scrape_page(page: Page, offset: int):
     details = []
     count = 0
@@ -52,7 +68,7 @@ async def scrape_page(page: Page, offset: int):
 
     if product_container:
         await page.wait_for_function(
-            "document.querySelectorAll('div[data-component-type=\"s-search-result\"]').length > 20",
+            f"document.querySelectorAll('div[data-component-type=\"s-search-result\"]').length >= {max_product_per_page}",
             timeout=3000,
         )
         products = await product_container.query_selector_all(
@@ -70,6 +86,7 @@ async def scrape_page(page: Page, offset: int):
                 "rate": None,
                 "rate_count": None,
                 "thumbnail": None,
+                "category": category_name,
                 "alt": None,
                 "price": [],
             }
@@ -99,22 +116,15 @@ async def scrape_page(page: Page, offset: int):
 
             # rating
             if review_container:
-                first_span = await review_container.query_selector(
-                    "div:first-child > span"
-                )
-                second_span = await review_container.query_selector(
-                    "div:first-child > span:nth-of-type(2)"
-                )
+                anchors = await review_container.query_selector_all("a[aria-label]")
 
-                if first_span:
-                    raw_rate = await first_span.get_attribute("aria-label")
-                    if raw_rate:
-                        rate_match = re.search(r"(\d+(\.\d+)?)", raw_rate)
-                        info["rate"] = rate_match
-
-                if second_span:
-                    raw_rate_count = await second_span.inner_text()
-                    info["rate_count"] = int(raw_rate_count.replace(",", ""))
+                for anchor in anchors:
+                    label = await anchor.get_attribute("aria-label")
+                    if label:
+                        if label.__contains__("stars"):
+                            info["rate"] = extract_ratings(label)
+                        elif label.__contains__("ratings"):
+                            info["rate_count"] = extract_rate_count(label)
             # image
             if image_container:
                 img = await image_container.query_selector("img")
@@ -140,11 +150,14 @@ async def scrape_page(page: Page, offset: int):
 
 
 async def main():
+    global max_product_per_page, category_name, page_number
     page_number = 1
-    base_url = f"https://www.amazon.com/s?i=baby-products-intl-ship&srs=16225005011&rh=n%3A16225005011&s=popularity-rank&fs=true&ref=lp_16225005011_sar&page=1"
+    max_product_per_page = 22  # 22 or 45
+    category_name = "art_and_crafts"
+    base_url = f"https://www.amazon.com/s?i=arts-crafts-intl-ship&srs=4954955011&rh=n%3A4954955011&s=popularity-rank&fs=true&ref=lp_4954955011_sar&page={page_number}"
     # init and launch the browser
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=False)
+        browser = await pw.chromium.launch(headless=True)
         page = await browser.new_page(
             viewport={"width": 1920, "height": 1080},
         )
@@ -160,13 +173,14 @@ async def main():
                 print(f"Scrapping page {page_number}")
                 data = await scrape_page(page, offset)
                 offset += data["count"]
-                save_file(data, f"amazon/baby/{page_number}")
+                save_file(data, f"amazon/{category_name}/{page_number}")
                 print(f"✅ Page {page_number} has been written.")
                 page_number += 1
 
                 if not await go_to_next_page(page):
                     break
-        except:
+        except Exception as e:
+            print(e)
             playsound("alert.mp3")
 
         await browser.close()
