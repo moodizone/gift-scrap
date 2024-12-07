@@ -1,5 +1,6 @@
 import os
 import json
+from urllib.parse import urlparse
 from playwright.async_api import Page
 from datetime import datetime, timedelta
 
@@ -21,7 +22,10 @@ def save_file(data, path: str):
 def absolute_url(page: Page, relative_url: str):
     if relative_url == None:
         return None
-    return page.url + relative_url
+    current_url = page.url
+    parsed_url = urlparse(current_url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+    return base_url + relative_url
 
 
 def convert_persian_to_english(persian_number: str):
