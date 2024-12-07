@@ -56,6 +56,14 @@ def extract_ratings(raw: str) -> int | None:
     return None
 
 
+def extract_dp(raw: str) -> str | None:
+    match = re.search(r"/dp/([^/]+)", raw)
+
+    if match:
+        return match.group(1)
+    return None
+
+
 async def scrape_page(page: Page, offset: int):
     details = []
     count = 0
@@ -89,6 +97,7 @@ async def scrape_page(page: Page, offset: int):
                 "category": category_name,
                 "alt": None,
                 "price": [],
+                "dp": None,
             }
             info["uuid"] = await product.get_attribute("data-uuid")
             title_container = await product.query_selector(
@@ -110,9 +119,11 @@ async def scrape_page(page: Page, offset: int):
                 info["title"] = await title_container.text_content()
 
                 if title_url:
-                    info["url"] = absolute_url(
-                        page, await title_url.get_attribute("href")
-                    )
+                    href = await title_url.get_attribute("href")
+
+                    if href:
+                        info["url"] = absolute_url(page, href)
+                        info["dp"] = extract_dp(href)
 
             # rating
             if review_container:
@@ -153,8 +164,8 @@ async def main():
     global max_product_per_page, category_name, page_number
     page_number = 1
     max_product_per_page = 22  # 22 or 45
-    category_name = "computer"
-    base_url = f"https://www.amazon.com/s?i=arts-crafts-intl-ship&srs=4954955011&rh=n%3A4954955011&s=popularity-rank&fs=true&ref=lp_4954955011_sar&page={page_number}"
+    category_name = "automotive"
+    base_url = f"https://www.amazon.com/s?i=automotive-intl-ship&srs=2562090011&rh=n%3A2562090011&s=popularity-rank&fs=true&ref=lp_2562090011_sar&page={page_number}"
     # init and launch the browser
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
