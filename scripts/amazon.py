@@ -2,6 +2,7 @@ import time
 import asyncio
 import re
 
+from playsound import playsound
 from playwright.async_api import async_playwright, Page
 from playwright_stealth import stealth_async
 from utils.index import save_file
@@ -138,10 +139,6 @@ async def scrape_page(page: Page, offset: int):
     return {"count": count, "details": details}
 
 
-def convert_to_plus_format(text: str):
-    return text.strip().replace(" ", "+")
-
-
 async def main():
     page_number = 1
     base_url = f"https://www.amazon.com/s?i=baby-products-intl-ship&srs=16225005011&rh=n%3A16225005011&s=popularity-rank&fs=true&ref=lp_16225005011_sar&page=1"
@@ -157,17 +154,20 @@ async def main():
         await stealth_async(page)
         await page.goto(base_url)
 
-        while True:
-            print("=============================")
-            print(f"Scrapping page {page_number}")
-            data = await scrape_page(page, offset)
-            offset += data["count"]
-            save_file(data, f"amazon/baby/{page_number}")
-            print(f"✅ Page {page_number} has been written.")
-            page_number += 1
+        try:
+            while True:
+                print("=============================")
+                print(f"Scrapping page {page_number}")
+                data = await scrape_page(page, offset)
+                offset += data["count"]
+                save_file(data, f"amazon/baby/{page_number}")
+                print(f"✅ Page {page_number} has been written.")
+                page_number += 1
 
-            if not await go_to_next_page(page):
-                break
+                if not await go_to_next_page(page):
+                    break
+        except:
+            playsound("alert.mp3")
 
         await browser.close()
 
