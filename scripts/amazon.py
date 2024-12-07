@@ -1,15 +1,18 @@
 import time
 import asyncio
+import re
+
 from playwright.async_api import async_playwright, Page
 from playwright_stealth import stealth_async
 from utils.index import save_file
 from utils.index import absolute_url
 
 
-base_url = "https://www.amazon.com"
-
-
 async def go_to_next_page(page: Page):
+    await page.wait_for_selector(
+        "span.s-pagination-strip ul",
+        timeout=5000,
+    )
     pagination_container = await page.query_selector("span.s-pagination-strip ul")
 
     if pagination_container:
@@ -23,7 +26,11 @@ async def go_to_next_page(page: Page):
                 return False
 
             await next_button.click()
-            time.sleep(3)
+            await page.wait_for_selector(
+                "h2.a-size-medium-plus.a-spacing-none.a-color-base.a-text-bold:has-text('Results')",
+                timeout=5000,
+            )
+            # await asyncio.sleep(3)
             return True
         else:
             print("❌ Can not find next button")
@@ -35,12 +42,18 @@ async def go_to_next_page(page: Page):
 async def scrape_page(page: Page, offset: int):
     details = []
     count = 0
+    await page.wait_for_selector(
+        'span[data-component-type="s-search-results"]', timeout=3000
+    )
     product_container = await page.query_selector(
         'span[data-component-type="s-search-results"]'
     )
 
     if product_container:
-
+        await page.wait_for_function(
+            "document.querySelectorAll('div[data-component-type=\"s-search-result\"]').length > 20",
+            timeout=3000,
+        )
         products = await product_container.query_selector_all(
             'div[data-component-type="s-search-result"]'
         )
@@ -93,10 +106,14 @@ async def scrape_page(page: Page, offset: int):
                 )
 
                 if first_span:
-                    info["rate"] = await first_span.get_attribute("aria-label")
+                    raw_rate = await first_span.get_attribute("aria-label")
+                    if raw_rate:
+                        rate_match = re.search(r"(\d+(\.\d+)?)", raw_rate)
+                        info["rate"] = rate_match
 
                 if second_span:
-                    info["rate_count"] = await second_span.inner_text()
+                    raw_rate_count = await second_span.inner_text()
+                    info["rate_count"] = int(raw_rate_count.replace(",", ""))
             # image
             if image_container:
                 img = await image_container.query_selector("img")
@@ -108,7 +125,12 @@ async def scrape_page(page: Page, offset: int):
             # price
             if price_container:
                 prices = await price_container.query_selector_all("span.a-offscreen")
-                info["price"] = [await price.text_content() for price in prices]
+                for price in prices:
+                    raw_txt = await price.text_content()
+
+                    if raw_txt:
+                        price = float(raw_txt.replace("$", "").replace(",", ""))
+                        info["price"].append(price)
 
             details.append(info)
     else:
@@ -121,27 +143,26 @@ def convert_to_plus_format(text: str):
 
 
 async def main():
+    page_number = 1
+    base_url = f"https://www.amazon.com/s?i=baby-products-intl-ship&srs=16225005011&rh=n%3A16225005011&s=popularity-rank&fs=true&ref=lp_16225005011_sar&page=1"
     # init and launch the browser
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=True)
+        browser = await pw.chromium.launch(headless=False)
         page = await browser.new_page(
             viewport={"width": 1920, "height": 1080},
         )
-        page_number = 1
         offset = 0
-        query = input("Enter the query and press 'ENTER':\n")
-        formattedQuery = convert_to_plus_format(query)
 
         # apply stealth techniques
         await stealth_async(page)
-        await page.goto(base_url + f"/s?k={formattedQuery}")
+        await page.goto(base_url)
 
         while True:
             print("=============================")
             print(f"Scrapping page {page_number}")
             data = await scrape_page(page, offset)
             offset += data["count"]
-            save_file(data, f"amazon/{query}/{page_number}")
+            save_file(data, f"amazon/baby/{page_number}")
             print(f"✅ Page {page_number} has been written.")
             page_number += 1
 
