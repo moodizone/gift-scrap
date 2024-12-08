@@ -1,12 +1,10 @@
-import time
 import asyncio
 import re
 
 from playsound import playsound
 from playwright.async_api import async_playwright, Page
 from playwright_stealth import stealth_async
-from utils.index import save_file
-from utils.index import absolute_url
+from utils.index import save_file, absolute_url
 
 
 async def go_to_next_page(page: Page):
@@ -192,7 +190,7 @@ async def main():
                     break
         except Exception as e:
             print(e)
-            playsound("alert.mp3")
+            playsound("assets/alert.mp3")
 
         await browser.close()
 

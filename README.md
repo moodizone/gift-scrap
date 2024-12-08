@@ -32,6 +32,6 @@ python -m {path to python file in module order}
 Watch mode (You have to import specific main script manually):
 ```
 npm i -g nodemon 
-nodemon --ignore data --exec entry.py
+nodemon --ignore data --exec src/entry.py
 ```
 
