@@ -1,3 +1,3 @@
-from scripts.amazon import main
+from EDA.format_data import main
 
 main()

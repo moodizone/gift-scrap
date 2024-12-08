@@ -1,4 +1,3 @@
-import asyncio
 import re
 
 from playsound import playsound
@@ -193,6 +192,3 @@ async def main():
             playsound("assets/alert.mp3")
 
         await browser.close()
-
-
-asyncio.run(main())
