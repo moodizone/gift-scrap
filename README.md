@@ -27,11 +27,11 @@ This project is designed for collecting and storing data from websites as JSON f
 ## **Scripts**
 Run as module:
 ```
-python -m scripts.{script name}
+python -m {path to python file in module order}
 ```
-Watch mode:
+Watch mode (You have to import specific main script manually):
 ```
-npm i -g nodemon
-nodemon --ignore data --exec python {file_name}.py
+npm i -g nodemon 
+nodemon --ignore data --exec entry.py
 ```
 
